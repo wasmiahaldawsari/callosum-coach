@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مدرّب قياس الجسم الثفني</title>
+<style>
+:root{--bg:#f3f6f8;--fg:#13222d;--mut:#5b6b77;--card:#fff;--bd:#d5dde3;--ac:#0b6e7a;--acfg:#fff;--bad:#b42318;--ok:#067647;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a21;--fg:#e6eef3;--mut:#9db0bd;--card:#16252e;--bd:#2a3d49;--ac:#4cc3d0;--acfg:#06232a;--bad:#ff8a7a;--ok:#5fd39a}}
+:root[data-theme="dark"]{--bg:#0f1a21;--fg:#e6eef3;--mut:#9db0bd;--card:#16252e;--bd:#2a3d49;--ac:#4cc3d0;--acfg:#06232a;--bad:#ff8a7a;--ok:#5fd39a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 "Segoe UI",Tahoma,"Noto Naskh Arabic",system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:1.45rem;margin:0 0 4px}
+.sub{color:var(--mut);margin:0 0 16px;font-size:.95rem}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+label{font-size:.9rem;color:var(--mut)}
+input[type=number],input[type=file]{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:6px 8px;max-width:100%}
+input[type=number]{width:96px}
+button{font:inherit;cursor:pointer;color:var(--fg);background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:10px 14px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+button.on{background:var(--ac);color:var(--acfg);border-color:var(--ac)}
+.stage{overflow:auto;max-height:70vh;border:1px solid var(--bd);border-radius:8px;background:#000}
+canvas{display:block;touch-action:auto;cursor:crosshair}
+#msg{min-height:1.6em;margin:8px 0 0;font-size:.92rem;color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:6px 4px;text-align:start;border-bottom:1px solid var(--bd)}
+.wrap{overflow-x:auto}
+.good{color:var(--ok);font-weight:600}.warn{color:var(--bad);font-weight:600}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-inline-end:6px}
+small{color:var(--mut)}
+</style>
+</head>
+<body>
+<main>
+<h1>مدرّب قياس الجسم الثفني</h1>
+<p class="sub">حمّل صورة رنين سهمية، عايِرها، وكرّر القياس. الأداة تعرض مقدار تباعد قياساتك بالملم.</p>
+
+<div class="box">
+<div class="row"><label for="f">الصورة (تبقى على جهازك)</label><input id="f" type="file" accept="image/*"></div>
+<div class="row" style="margin-top:8px">
+<label for="calmm">الطول الحقيقي لشيء معروف في الصورة (ملم)</label><input id="calmm" type="number" min="0" step="0.1" value="10">
+<span id="scale"><small>لم تتم المعايرة</small></span></div>
+</div>
+
+<div class="box">
+<div class="row" id="modes" role="group" aria-label="نوع القياس">
+<button data-m="cal" class="on">1. معايرة</button>
+<button data-m="genu"><span class="dot" style="background:#d97706"></span>سماكة Genu</button>
+<button data-m="spl"><span class="dot" style="background:#2563eb"></span>سماكة Splenium</button>
+<button data-m="len"><span class="dot" style="background:#7c3aed"></span>طول الجسم الثفني</button>
+</div>
+<p id="msg" role="status">اختاري الصورة وكبّريها، ثم فعّلي «وضع القياس» وحددي نقطتين على مسافة معروفة للمعايرة.</p>
+</div>
+
+<div class="row" style="margin-bottom:8px"><button id="pm">وضع القياس: متوقف</button><button id="ok" disabled>تثبيت النقطة</button><button id="nopt">إلغاء النقطة</button><canvas id="lp" width="120" height="120" style="display:none;border:1px solid var(--bd);border-radius:8px"></canvas></div>
+<div class="stage" id="stage"><canvas id="cv" width="800" height="500"></canvas></div>
+
+<div class="box" style="margin-top:12px">
+<div class="row">
+<label for="zoom">تكبير</label><input id="zoom" type="range" min="1" max="8" step="0.25" value="1">
+<label for="tol">أقصى تباعد مقبول (ملم)</label><input id="tol" type="number" min="0.1" step="0.1" value="1">
+<label for="ref">قيمة مرجعية لهذا النوع (ملم)</label><input id="ref" type="number" min="0" step="0.01">
+<button id="undo">تراجع</button><button id="clrcal">مسح المعايرة</button><button id="clr">مسح هذا النوع</button>
+</div></div>
+
+<div class="box"><div class="wrap">
+<table><thead><tr><th>القياس</th><th>العدد</th><th>المتوسط</th><th>الانحراف</th><th>التباعد</th><th>عن المرجع</th><th>الحالة</th></tr></thead>
+<tbody id="res"></tbody></table></div>
+<small>نصيحة: خذ ٣ قياسات على الأقل لكل نوع. الثبات الكامل (ICC) يحتاج جلستين أو شخصين، وهذه الأداة تعطي مؤشراً أولياً فقط.</small></div>
+
+<p><small>أداة تدريب وجودة قياس، وليست أداة تشخيص.</small></p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const NAMES={genu:'سماكة Genu',spl:'سماكة Splenium',len:'طول الجسم الثفني'};
+const COL={cal:'#9ca3af',genu:'#d97706',spl:'#2563eb',len:'#7c3aed'};
+const cv=$('cv'),ctx=cv.getContext('2d');
+let img=null,scale=null,mode='cal',pts=[],lines=[],trials={genu:[],spl:[],len:[]},refs={},pending=null,measuring=false;
+const msg=t=>$('msg').textContent=t;
+const fmt=n=>n.toFixed(2);
+
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  if(img)ctx.drawImage(img,0,0);
+  const u=Math.max(2,cv.width/450);
+  const seg=(a,b,c)=>{ctx.strokeStyle=c;ctx.lineWidth=u;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();[a,b].forEach(p=>{ctx.fillStyle=c;ctx.beginPath();ctx.arc(p.x,p.y,u*1.6,0,7);ctx.fill()})};
+  lines.forEach(l=>seg(l.a,l.b,COL[l.m]));
+  pts.forEach(p=>{ctx.fillStyle=COL[mode];ctx.beginPath();ctx.arc(p.x,p.y,u*1.6,0,7);ctx.fill()});
+  loupe();
+  if(pending){ctx.strokeStyle='#ef4444';ctx.lineWidth=u;ctx.beginPath();ctx.arc(pending.x,pending.y,u*3,0,7);ctx.stroke()}
+}
+function stats(a){
+  const n=a.length,m=a.reduce((s,x)=>s+x,0)/n;
+  const sd=n>1?Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(n-1)):0;
+  return{n,m,sd,rg:Math.max(...a)-Math.min(...a)};
+}
+function render(){
+  const tol=parseFloat($('tol').value)||1,rows=[];
+  for(const k of Object.keys(NAMES)){
+    const a=trials[k];
+    if(!a.length||!scale){rows.push(`<tr><td>${NAMES[k]}</td><td>${a.length}</td><td colspan="5">—</td></tr>`);continue}
+    const s=stats(a.map(p=>p*scale));
+    const r=refs[k],d=(r>0)?fmt(s.m-r):'—';
+    let st,c;
+    if(s.n<3){st='أضف قياسات';c=''}else if(s.rg<=tol){st='ثابت';c='good'}else{st='متباعد، أعد القياس';c='warn'}
+    rows.push(`<tr><td>${NAMES[k]}</td><td>${s.n}</td><td>${fmt(s.m)}</td><td>${fmt(s.sd)}</td><td>${fmt(s.rg)}</td><td>${d}</td><td class="${c}">${st}</td></tr>`);
+  }
+  $('res').innerHTML=rows.join('');
+}
+function finish(){
+  const[a,b]=pts,dpx=Math.hypot(a.x-b.x,a.y-b.y);pts=[];
+  if(dpx<2){msg('النقطتان متقاربتان جداً. حاول مرة ثانية.');draw();return}
+  if(mode==='cal'){
+    const mm=parseFloat($('calmm').value);
+    if(!(mm>0)){msg('اكتب الطول الحقيقي بالملم أولاً ثم أعد النقطتين.');draw();return}
+    scale=mm/dpx;lines=lines.filter(l=>l.m!=='cal');lines.push({m:'cal',a,b});
+    $('scale').innerHTML=`<small>كل بكسل = ${scale.toFixed(4)} ملم</small>`;
+    msg('تمت المعايرة. اختر نوع القياس وابدأ.');
+  }else{
+    if(!scale){msg('عايِر الصورة أولاً.');draw();return}
+    trials[mode].push(dpx);lines.push({m:mode,a,b});
+    msg(`${NAMES[mode]}: ${fmt(dpx*scale)} ملم. كرّر القياس لتتأكد من ثباتك.`);
+  }
+  draw();render();
+}
+const lp=$('lp'),lc=lp.getContext('2d');
+function loupe(){
+  if(!pending||!img){lp.style.display='none';return}
+  lp.style.display='block';const k=24;
+  lc.fillStyle='#000';lc.fillRect(0,0,120,120);
+  lc.drawImage(cv,pending.x-k,pending.y-k,2*k,2*k,0,0,120,120);
+  lc.strokeStyle='#ef4444';lc.lineWidth=1;lc.beginPath();lc.moveTo(60,0);lc.lineTo(60,120);lc.moveTo(0,60);lc.lineTo(120,60);lc.stroke();
+}
+function setPending(e){
+  const r=cv.getBoundingClientRect();
+  pending={x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height};
+  $('ok').disabled=false;draw();
+}
+cv.addEventListener('pointerdown',e=>{
+  if(!img||!measuring)return;
+  e.preventDefault();cv.setPointerCapture(e.pointerId);setPending(e);
+});
+cv.addEventListener('pointermove',e=>{if(pending&&measuring&&e.buttons)setPending(e)});
+$('pm').onclick=()=>{
+  measuring=!measuring;pending=null;pts=[];$('ok').disabled=true;
+  cv.style.touchAction=measuring?'none':'auto';
+  $('pm').classList.toggle('on',measuring);
+  $('pm').textContent='وضع القياس: '+(measuring?'يعمل':'متوقف');
+  draw();
+  msg(measuring?'المسي مكان النقطة واسحبي لتعديلها (العدسة تكبّر)، ثم اضغطي «تثبيت النقطة».':'وضع القياس متوقف: حرّكي وكبّري الصورة بدون رسم.');
+};
+$('ok').onclick=()=>{
+  if(!pending)return;
+  pts.push(pending);pending=null;$('ok').disabled=true;
+  if(pts.length===2)finish();else{draw();msg('ثبتت النقطة الأولى. حددي النقطة الثانية.')}
+};
+$('nopt').onclick=()=>{pending=null;$('ok').disabled=true;draw()};
+$('clrcal').onclick=()=>{
+  scale=null;lines=lines.filter(l=>l.m!=='cal');
+  $('scale').innerHTML='<small>لم تتم المعايرة</small>';
+  draw();render();msg('تم مسح المعايرة. أعيدي المعايرة قبل القياس.');
+};
+$('f').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const im=new Image();
+  im.onload=()=>{img=im;cv.width=im.naturalWidth;cv.height=im.naturalHeight;
+    scale=null;pts=[];lines=[];trials={genu:[],spl:[],len:[]};
+    $('scale').innerHTML='<small>لم تتم المعايرة</small>';
+    cv.style.width=(100*$('zoom').value)+'%';
+    draw();render();msg('اضغط نقطتين على مسافة معروفة للمعايرة.')};
+  im.onerror=()=>msg('تعذّر فتح الملف. جرّب صورة PNG أو JPG.');
+  im.src=URL.createObjectURL(f);
+};
+$('zoom').oninput=e=>cv.style.width=(100*e.target.value)+'%';
+$('tol').oninput=render;
+$('ref').oninput=e=>{if(mode!=='cal'){refs[mode]=parseFloat(e.target.value);render()}};
+document.querySelectorAll('#modes button').forEach(b=>b.onclick=()=>{
+  mode=b.dataset.m;pts=[];pending=null;$('ok').disabled=true;draw();
+  document.querySelectorAll('#modes button').forEach(x=>x.classList.toggle('on',x===b));
+  $('ref').value=refs[mode]||'';
+  msg(mode==='cal'?'اضغط نقطتين على الطول المعروف.':`${NAMES[mode]}: اضغط نقطتين على طرفي القياس.`);
+});
+$('undo').onclick=()=>{
+  if(pending||pts.length){pending=null;pts=[];$('ok').disabled=true;draw();return}
+  for(let i=lines.length-1;i>=0;i--){
+    if(lines[i].m==='cal')continue;
+    trials[lines[i].m].pop();lines.splice(i,1);break;
+  }
+  draw();render();
+};
+$('clr').onclick=()=>{
+  if(mode==='cal')return;
+  trials[mode]=[];lines=lines.filter(l=>l.m!==mode);draw();render();msg('تم مسح قياسات '+NAMES[mode]+'.');
+};
+draw();render();
+</script>
+</body>
+</html>
